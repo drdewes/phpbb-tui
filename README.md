@@ -3,6 +3,21 @@
 Read and write phpBB forums from the terminal. Write posts in **Markdown** in
 your own `$EDITOR`; they are converted to BBCode on send.
 
+> **🇩🇪 Deutsche Fassung:** [ganz unten](#phpbb-tui-deutsch). 👇
+
+---
+
+## Honest foreword
+
+I am **not a programmer**. I write in a phpBB forum every day and wanted to do
+it from the terminal, where the rest of my work happens. The code was written
+for me by **[Claude Code](https://claude.com/claude-code)**; I said what I
+wanted, tried it out and said what still bothered me. I am publishing it
+because there is nothing else of its kind, and because the pitfalls we ran into
+are documented nowhere — the afternoon they cost us is written down below. 🙂
+
+---
+
 ![Topic list](images/topics.png)
 
 One line per topic — about thirty per screen. In a text browser the same page
@@ -179,6 +194,15 @@ MIT
 
 phpBB-Foren im Terminal lesen und schreiben. Beiträge entstehen in **Markdown**
 im eigenen `$EDITOR` und werden beim Senden nach BBCode gewandelt.
+
+## Ehrliches Vorwort
+
+Ich bin **kein Programmierer**. Ich schreibe täglich in einem phpBB-Forum und
+wollte das vom Terminal aus tun, wo auch der Rest meiner Arbeit stattfindet.
+Den Code hat mir **[Claude Code](https://claude.com/claude-code)** gebaut; ich
+habe gesagt, was ich will, es ausprobiert und gesagt, was mich noch stört. Ich
+veröffentliche es, weil es nichts Vergleichbares gibt — und weil die
+Stolpersteine, über die wir gefallen sind, nirgends dokumentiert sind. 🙂
 
 Es gibt keinen gepflegten Terminal-Client für phpBB — der einzige auffindbare
 hat zwei Commits von 2017 und kann nur lesen. Der Grund: phpBB hat keine
