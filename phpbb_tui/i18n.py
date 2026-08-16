@@ -48,6 +48,7 @@ TEXTE: dict[str, dict[str, str]] = {
         "seite_von": "Seite {a}/{b}",
         "eigener_beitrag": "(eigener Beitrag)",
         "angemeldet": "angemeldet",
+        "gast": "Gast",
         "vorschau": "Vorschau",
         "betreff_zeile": "Betreff: {betreff}",
         "anhaenge_zeile": "Anhänge: {liste}",
@@ -130,6 +131,7 @@ TEXTE: dict[str, dict[str, str]] = {
         "seite_von": "Page {a}/{b}",
         "eigener_beitrag": "(your post)",
         "angemeldet": "signed in",
+        "gast": "guest",
         "vorschau": "Preview",
         "betreff_zeile": "Subject: {betreff}",
         "anhaenge_zeile": "Attachments: {liste}",
@@ -184,6 +186,7 @@ HILFE = {
   phpbb-tui login <name>    (neu) anmelden
   phpbb-tui list            eingerichtete Foren zeigen
   phpbb-tui logout <name>   Sitzung verwerfen
+  --guest                   ohne Anmeldung lesen (Boards mit Gastzugang)
 
 Tasten: j/k bewegen · l/Enter öffnen · h/q zurück · ^D/^U halbe Seite
         g/G Anfang/Ende · n/p Seite · / filtern · s suchen · w Forum wechseln
@@ -203,6 +206,7 @@ Sprache: PHPBB_TUI_LANG=de|en""",
   phpbb-tui login <name>    sign in again
   phpbb-tui list            list configured boards
   phpbb-tui logout <name>   drop the session
+  --guest                   read without an account (boards that allow guests)
 
 Keys:   j/k move · l/Enter open · h/q back · ^D/^U half page
         g/G top/bottom · n/p page · / filter · s search · w switch board

@@ -228,7 +228,7 @@ class Oberflaeche:
                 eintraege.append(("forum", f))
 
             taste, pos = self.liste(
-                f"{self.b.name} · {self.b.username or t('angemeldet')}"
+                f"{self.b.name} · {self.b.username or t('gast')}"
                 + (f"  ⟨{filter_text}⟩" if filter_text else ""),
                 zeilen, t("hilfe_menue"), tasten="/swR", start=pos)
 
@@ -282,21 +282,21 @@ class Oberflaeche:
                 laden = False
                 pos = 0
 
-            sichtbar = [t for t in themen
-                        if not filter_text or filter_text.lower() in t.title.lower()]
+            sichtbar = [x for x in themen
+                        if not filter_text or filter_text.lower() in x.title.lower()]
             eintraege: list[tuple[str, object]] = [("forum", f) for f in unterforen]
             zeilen = [f"  ▸ {f.name}" for f in unterforen]
             if unterforen and sichtbar:
                 zeilen.append("  " + "─" * 40)
                 eintraege.append(("trenner", None))
-            for t in sichtbar:
-                datum = (t.last_date or "")[:19]
-                rechte = f"{t.replies:>4}  {t.last_author[:18]:<18} {datum:>19}"
-                marke = "!" if t.sticky else ("●" if t.unread else " ")
+            for thema in sichtbar:      # nicht „t": das ist die Übersetzung
+                datum = (thema.last_date or "")[:19]
+                rechte = f"{thema.replies:>4}  {thema.last_author[:18]:<18} {datum:>19}"
+                marke = "!" if thema.sticky else ("●" if thema.unread else " ")
                 platz = max(10, self.breite - len(rechte) - 6)
-                zeilen.append(f" {marke} {t.title[:platz]}".ljust(
+                zeilen.append(f" {marke} {thema.title[:platz]}".ljust(
                     max(0, self.breite - len(rechte) - 2)) + rechte)
-                eintraege.append(("thema", t))
+                eintraege.append(("thema", thema))
 
             taste, pos = self.liste(
                 f"{kopf}{f'  ⟨{filter_text}⟩' if filter_text else ''}",

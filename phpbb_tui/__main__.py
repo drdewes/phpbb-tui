@@ -47,6 +47,10 @@ def auswahl(cfg: cfgmod.Config) -> cfgmod.BoardConfig | None:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    # Gastmodus: viele Boards sind ohne Konto lesbar. Schreiben geht dann
+    # nicht, das Forum sagt es beim Versuch selbst.
+    gast = "--guest" in argv or "--gast" in argv
+    argv = [a for a in argv if a not in ("--guest", "--gast")]
     cfg = cfgmod.laden()
 
     if argv and argv[0] in ("-h", "--help", "hilfe", "help"):
@@ -67,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         bc = cfgmod.board_hinzufuegen(name, url)
         b = _board(bc)
-        if not anmelden(b):
+        if not gast and not anmelden(b):
             return 1
         print(t("cli_eingerichtet", name=name, slug=bc.slug))
         return 0
@@ -115,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         if not bc:
             return 1
         b = _board(bc)
-        if not b.logged_in():
+        if not gast and not b.logged_in():
             print(t("cli_noch_nicht", name=bc.name) + "\n")
             if not anmelden(b, bc.user):
                 return 1

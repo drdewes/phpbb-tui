@@ -3,17 +3,24 @@
 Read and write phpBB forums from the terminal. Write posts in **Markdown** in
 your own `$EDITOR`; they are converted to BBCode on send.
 
-```
- Hardware & Peripherals                                                  Page 1/32
- ! Read this before posting                     9  admin              18 Dec 2025, 10:12
-   Floppy drive not detected                   16  alex               15 Aug 2026, 16:55
- ● Serial console garbles umlauts              16  sam                14 Aug 2026, 10:36
- ● Anyone got the ROM listing?                  8  jo                 13 Aug 2026, 20:14
-```
+![Topic list](images/topics.png)
 
 One line per topic — about thirty per screen. In a text browser the same page
 shows **two**, because phpBB ships every topic row twice (desktop columns plus
 a `responsive-show` block for phones) and a graphical browser hides one of them.
+
+The forum tree comes from the board's own jump box, so it includes every forum
+you may see:
+
+![Forum tree](images/forums.png)
+
+Threads are plain text, with `┌─ author · date` between posts and quotes
+indented:
+
+![Thread](images/thread.png)
+
+*(Screenshots taken from the public phpBB.de support board, read as a guest
+with `phpbb-tui phpbb.de --guest`.)*
 
 ## Why this exists
 
@@ -52,6 +59,7 @@ phpbb-tui add <url>       add a board
 phpbb-tui login <name>    log in again
 phpbb-tui list            show configured boards
 phpbb-tui logout <name>   drop the session
+phpbb-tui <name> --guest  read without an account (boards that allow guests)
 ```
 
 Vim keys throughout:
@@ -183,7 +191,8 @@ ln -s ~/src/phpbb-tui/phpbb-tui.sh ~/.local/bin/phpbb-tui
 phpbb-tui add https://forum.example.org/forum
 ```
 
-Das Passwort wird nirgends gespeichert, nur das Sitzungs-Cookie.
+Das Passwort wird nirgends gespeichert, nur das Sitzungs-Cookie. Boards mit
+Gastzugang lassen sich auch ohne Konto lesen: `phpbb-tui <name> --guest`.
 
 **Bedienung** — Vim-Tasten: `j`/`k` bewegen, `l`/Enter öffnen, `h`/`q` zurück,
 `^D`/`^U` halbe Seite, `g`/`G` Anfang/Ende, `n`/`p` Seite blättern, `/`

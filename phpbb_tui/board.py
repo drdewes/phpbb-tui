@@ -351,9 +351,12 @@ class Board:
         return themen, [], f"Suche: {worte}", seite, seiten
 
     def _parse_topics(self, page: str) -> tuple[list[Topic], str, int, int]:
-        title = strip_tags((re.search(r"<title>(.*?)</title>", page, re.S)
-                            or [None, ""])[1])
-        title = re.sub(r"\s*-\s*[^-]*$", "", title) or title
+        # Überschrift der Seite bevorzugen; der <title> trägt zusätzlich den
+        # Boardnamen, und je nach Board steht der vorn oder hinten.
+        kopf = (re.search(r'<h2 class="(?:forum|searchresults)-title"[^>]*>'
+                          r'(?:<a[^>]*>)?(.*?)(?:</a>)?</h2>', page, re.S)
+                or re.search(r"<title>(.*?)</title>", page, re.S))
+        title = strip_tags(kopf.group(1)) if kopf else ""
         topics: list[Topic] = []
         # Nicht bis zum nächsten </li> schneiden: mehrseitige Themen haben eine
         # eigene Seitenliste (<li>) in der Zeile stehen.
