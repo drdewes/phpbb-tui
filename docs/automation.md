@@ -48,16 +48,18 @@ visible independently of the topic-title filter.
 
 ## Authentication and guest access
 
-Authentication follows `login → stored session → read commands`:
+Authentication follows `login → stored session → normal commands`:
 
 ```sh
 phpbb-tui login example
 phpbb-tui topics example --forum 2 --json
 ```
 
-Login retains its existing interactive username/password prompts. This stage
-does not add login credential options. Automation commands reject `--user`
-and `--password`, never log in automatically, and return status 3 for a
+Bare `login <board>` retains its existing interactive prompts. Explicit login
+options enable unattended authentication; see the
+[authentication reference](authentication.md) for `--user`, `--password`,
+`--password-stdin`, JSON/quiet output, and credential handling. Other automation
+commands reject credentials, never log in automatically, and return status 3 for a
 missing or expired authenticated session. Establish the session before starting
 an unattended job. Session cookies stay in the existing XDG state location;
 they are credentials and should be protected accordingly.

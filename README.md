@@ -151,7 +151,8 @@ phpbb-tui post example --forum 2 --subject "Report" --body-file report.md --dry-
 ```
 
 Run `login` explicitly to establish a session; automation commands reuse it and
-fail if it expires. Use `--guest` for an isolated anonymous session on boards
+fail if it expires. For unattended login, use `--user` with `--password-stdin`
+or `--password`; see the [authentication reference](docs/authentication.md). Use `--guest` for an isolated anonymous session on boards
 that allow guest access. `--quiet` suppresses successful output; it conflicts
 with `--json`. Each command has `--help`.
 
