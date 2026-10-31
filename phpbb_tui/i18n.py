@@ -27,6 +27,16 @@ TEXTE: dict[str, dict[str, str]] = {
         "download_ersetzen": "Vorhandene Datei {pfad} ersetzen?",
         "download_abgebrochen": "Download abgebrochen; Datei unverändert",
         "download_unsicher": "Ziel ist keine reguläre Datei.",
+        "hilfe_vorschau_inline": (
+            "a Senden · b Bearbeiten · d Datei · i Inline · "
+            "x Entfernen · q Zurück"),
+        "inline_titel": "Anhang im Text platzieren",
+        "inline_auswahl": "Enter Auswählen · q Abbrechen",
+        "inline_editor": (
+            "<!-- {{attach:id…}} an die gewünschte Stelle verschieben. -->"),
+        "inline_fehler": (
+            "Ungültiger oder entfernter Inline-Anhang; "
+            "Platzhalter korrigieren."),
         # Hilfezeilen
         "such_ungelesen": "Ungelesene Beiträge",
         "such_neu": "Neue Beiträge seit letztem Besuch",
@@ -170,6 +180,14 @@ TEXTE: dict[str, dict[str, str]] = {
         "download_ersetzen": "Replace existing file {pfad}?",
         "download_abgebrochen": "Download canceled; existing file unchanged",
         "download_unsicher": "Destination is not a regular file.",
+        "hilfe_vorschau_inline": (
+            "a send · b edit · d attach · i inline · x remove · q back"),
+        "inline_titel": "Place attachment in text",
+        "inline_auswahl": "Enter select · q cancel",
+        "inline_editor": (
+            "<!-- Move {{attach:id…}} to the desired position. -->"),
+        "inline_fehler": (
+            "Invalid or removed inline attachment; correct its placeholder."),
         "such_ungelesen": "Unread posts",
         "such_neu": "New posts since last visit",
         "such_eigene": "My posts",

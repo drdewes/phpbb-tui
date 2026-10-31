@@ -136,6 +136,143 @@ class AttachmentsCliTests(unittest.TestCase):
         return [call for call in self.session.post.call_args_list
                 if "post" in call.kwargs["data"]]
 
+    def test_inline_alias_uses_returned_attachment_index(self):
+        path = self.fixture("mascot.png")
+        status, _ = self.invoke(
+            "reply", "Example", "--topic", "42", "--body",
+            "Before {{attach:mascot}} after", "--attach-inline",
+            "mascot=" + path)
+        self.assertEqual(status, 0)
+        message = self.final_sends()[0].kwargs["data"]["message"]
+        self.assertEqual(message,
+                         "Before [attachment=0]mascot.png[/attachment] after")
+
+    def test_unknown_inline_alias_fails_before_network(self):
+        status, _ = self.invoke(
+            *self.post_args(), "--body", "{{attach:missing}}")
+        self.assertEqual(status, 2)
+        self.session.get.assert_not_called()
+        self.session.post.assert_not_called()
+
+    def test_inline_dry_run_keeps_unresolved_indexes_without_uploading(self):
+        status, data = self.invoke(
+            *self.post_args(), "--body", "{{attach:bear}}",
+            "--attach-inline", "bear=" + self.fixture("bear.png"),
+            "--dry-run")
+        self.assertEqual(status, 0)
+        self.assertIn("{{attach:bear}}", data["body_bbcode"])
+        self.assertEqual(data["attachments"], ["bear.png"])
+        self.session.post.assert_not_called()
+
+    def test_inline_reordering_duplicate_names_and_existing_edit_files(self):
+        from phpbb_tui.board import Board
+
+        def prepend(form, path):
+            rows = [(form.felder[key], form.felder[
+                key.replace("[attach_id]", "[real_filename]")])
+                for key in form.felder if key.endswith("[attach_id]")]
+            rows.insert(0, (str(100 + len(rows)), path.name))
+            for key in list(form.felder):
+                if key.startswith("attachment_data["):
+                    del form.felder[key]
+            for index, (aid, name) in enumerate(rows):
+                form.felder[f"attachment_data[{index}][attach_id]"] = aid
+                form.felder[f"attachment_data[{index}][real_filename]"] = name
+
+        original_get = self.get_response
+        self.session.get.side_effect = lambda url, **kwargs: (
+            Mock(text=form(files=("existing.png",)))
+            if url.endswith("posting.php") else original_get(url, **kwargs))
+        path = self.fixture("same_name.png")
+        with patch.object(Board, "datei_anhaengen", side_effect=prepend):
+            status, _ = self.invoke(
+                "edit", "Example", "--post", "201", "--body",
+                "{{attach:first_one}} then {{attach:second_two}} "
+                "[attachment=0]existing.png[/attachment]",
+                "--attach", path, "--attach-inline", "first_one=" + path,
+                "--attach-inline", "second_two=" + path)
+        self.assertEqual(status, 0)
+        message = self.final_sends()[0].kwargs["data"]["message"]
+        self.assertEqual(message,
+                         "[attachment=1]same_name.png[/attachment] then "
+                         "[attachment=0]same_name.png[/attachment] "
+                         "[attachment=3]existing.png[/attachment]")
+
+    def test_invalid_inline_aliases_make_no_requests(self):
+        path = self.fixture("bear.png")
+        cases = (("bear=" + path, "bear=" + path),
+                 ("bad alias=" + path,), ("bear=",), ("bear",),
+                 ("unused=" + path,))
+        for values in cases:
+            with self.subTest(values=values):
+                options = [item for value in values
+                           for item in ("--attach-inline", value)]
+                self.assertEqual(self.invoke(
+                    *self.post_args(), "--body", "{{attach:bear}}",
+                    *options)[0], 2)
+        self.session.get.assert_not_called()
+        self.session.post.assert_not_called()
+
+    def test_missing_inline_file_fails_before_network(self):
+        self.assertEqual(self.invoke(
+            *self.post_args(), "--body", "{{attach:bear}}",
+            "--attach-inline", "bear=" + str(self.root / "missing.png"))[0], 5)
+        self.session.get.assert_not_called()
+
+    def test_unconfirmed_inline_id_stops_final_submission(self):
+        from phpbb_tui.board import Board
+
+        def missing_id(form, path):
+            form.felder["attachment_data[0][real_filename]"] = path.name
+
+        with patch.object(Board, "datei_anhaengen", side_effect=missing_id):
+            status, _ = self.invoke(
+                *self.post_args(), "--body", "{{attach:bear}}",
+                "--attach-inline", "bear=" + self.fixture("bear.png"))
+        self.assertEqual(status, 4)
+        self.assertEqual(self.final_sends(), [])
+
+    def test_pm_and_pm_reply_use_inline_placement(self):
+        path = self.fixture("bear.png")
+        for command in (("pm", "Example", "--to", "Alice",
+                         "--subject", "Inline"),
+                        ("pm-reply", "Example", "--message", "5")):
+            with self.subTest(command=command):
+                status, _ = self.invoke(
+                    *command, "--body", "{{attach:bear}}",
+                    "--attach-inline", "bear=" + path)
+                self.assertEqual(status, 0)
+                message = self.final_sends()[-1].kwargs["data"]["message"]
+                self.assertEqual(message,
+                                 "[attachment=0]bear.png[/attachment]")
+
+    def test_repeated_inline_placeholder_uploads_only_once(self):
+        path = self.fixture("bear.png")
+        status, _ = self.invoke(
+            *self.post_args(), "--body", "{{attach:bear}} {{attach:bear}}",
+            "-I", "bear=" + path)
+        self.assertEqual(status, 0)
+        self.assertEqual(len(self.uploads), 1)
+        message = self.final_sends()[0].kwargs["data"]["message"]
+        self.assertEqual(message.count("[attachment=0]"), 2)
+
+    def test_inline_preview_resolves_tags_without_final_send(self):
+        status, data = self.invoke(
+            *self.post_args(), "--body", "{{attach:bear}}", "--preview",
+            "-I", "bear=" + self.fixture("bear.png"))
+        self.assertEqual(status, 0)
+        self.assertFalse(data["submitted"])
+        self.assertEqual(self.final_sends(), [])
+        message = self.session.post.call_args.kwargs["data"]["message"]
+        self.assertEqual(message, "[attachment=0]bear.png[/attachment]")
+
+    def test_unclosed_inline_placeholder_fails_before_http(self):
+        status, _ = self.invoke(
+            *self.post_args(), "--body", "{{attach:bear}",
+            "-I", "bear=" + self.fixture("bear.png"))
+        self.assertEqual(status, 2)
+        self.session.get.assert_not_called()
+
     def test_listing_is_scoped_to_the_selected_post(self):
         status, data = self.invoke("attachments", "Example", "--post", "101")
         self.assertEqual(status, 0)

@@ -339,7 +339,7 @@ def main(argv: list[str]) -> int:
         body = (posting.body_input(args)
                 if args.command in BODY_COMMANDS else "")
         if args.command in BODY_COMMANDS:
-            attachments.validate_uploads(args)
+            attachments.validate_uploads(args, body)
         if args.command == "search" and args.query is not None:
             if not args.query.strip():
                 raise CommandError(

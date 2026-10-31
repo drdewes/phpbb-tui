@@ -18,9 +18,12 @@ from .board import (PM_ORDNER, SUCHEN, UCP_LISTEN, Anhang, Board, BoardError, En
                     Forum, LoginRequired, Nachricht, PM, Thread, Topic)
 from .config import Config
 from .i18n import t
-from .markup import bbcode_to_md, md_to_bbcode
 from . import entwuerfe, tui_submission
 from .tui_pagination import navigation
+from .markup import bbcode_to_md
+from .attachments import attachment_fields
+from .command_error import CommandError
+from . import tui_attachments
 
 
 C_KOPF, C_NEU, C_AUTOR, C_DATUM, C_HILFE, C_ZITAT, C_AUSWAHL, C_WARN, C_ANHANG = range(1, 10)
@@ -674,6 +677,12 @@ class Oberflaeche:
             # Ein früher hier angefangener Text geht vor die Vorlage des Forums.
             betreff = gesichert[0] or betreff
             vorlage, hinweis = gesichert[1], t("entwurf_zurueck")
+        if "[attachment=" in vorlage:
+            try:
+                vorlage = tui_attachments.editor_body(e, vorlage)
+            except CommandError:
+                self.meldung = t("inline_fehler")
+                return False
 
         while True:
             betreff, text = self._editor(betreff, vorlage, hinweis)
@@ -686,9 +695,15 @@ class Oberflaeche:
                 entwuerfe.sichern(*ziel, betreff, text)
             except OSError as fehler:
                 self.meldung = t("entwurf_nicht_gesichert", fehler=fehler)
-            bb = md_to_bbcode(text)
 
-            while True:      # Vorschau-Schleife (Anhänge ändern nichts am Text)
+            while True:      # Resolve stable attachment IDs for every preview.
+                try:
+                    bb = tui_attachments.render(e, text)
+                except (ValueError, CommandError):
+                    self.meldung = t("inline_fehler")
+                    hinweis = t("inline_fehler")
+                    wahl = "b"
+                    break
                 self.warten(t("vorschau_laeuft"))
                 try:
                     seite = self.b.submit(e, betreff, bb, preview=True)
@@ -708,9 +723,24 @@ class Oberflaeche:
                 # Knopf im Formular, und wir bieten ihn gar nicht erst an.
                 wahl = self.seite_zeigen(
                     titel or t("vorschau"), zeilen,
-                    t("hilfe_vorschau") if e.anhaenge_moeglich
+                    (t("hilfe_vorschau_inline") if dateien
+                     else t("hilfe_vorschau")) if e.anhaenge_moeglich
                     else t("hilfe_vorschau_ohne_anhang"),
-                    tasten="adxb" if e.anhaenge_moeglich else "ab")
+                    tasten=("adxb" + ("i" if dateien else ""))
+                    if e.anhaenge_moeglich else "ab")
+
+                if wahl == "i":
+                    try:
+                        inline_text = self._inline_anhang(e, text)
+                    except CommandError:
+                        self.meldung = t("inline_fehler")
+                        continue
+                    if inline_text is None:
+                        continue
+                    text = inline_text
+                    vorlage = text
+                    wahl = "b"
+                    break
 
                 if wahl == "d":
                     self._anhaengen(e)
@@ -758,6 +788,20 @@ class Oberflaeche:
                 self.meldung = t("verworfen")
                 return False
 
+    def _inline_anhang(self, e: Entwurf, text: str) -> str | None:
+        """Select an uploaded file and append a movable editor placeholder."""
+        items = sorted(attachment_fields(e).items(),
+                       key=lambda item: item[1][0])
+        if not items:
+            return None
+        key, pos = self.liste(
+            t("inline_titel"),
+            [f"{name} ({{{{attach:id{aid}}}}})" for aid, (_, name) in items],
+            t("inline_auswahl"))
+        if key != "\n":
+            return None
+        return text + "\n\n{{attach:id" + items[pos][0] + "}}"
+
     def _anhaengen(self, e: Entwurf) -> None:
         pfad = self.frage(t("frage_datei"))
         if not pfad:
@@ -775,6 +819,7 @@ class Oberflaeche:
             "",
             t("editor_hinweis_1"),
             t("editor_hinweis_2"),
+            *([t("inline_editor")] if "{{attach:" in vorlage else []),
             "",
         ]
         if hinweis:

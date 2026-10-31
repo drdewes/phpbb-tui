@@ -12,9 +12,12 @@ import requests
 
 from .board import Anhang, Board, BoardError, Entwurf, LoginRequired
 from .command_error import CommandError
+from .markup import md_to_bbcode
 
 
 COMMANDS = ("attachments", "attachment")
+INLINE = re.compile(r"\{\{attach:([^{}]*)\}\}")
+ALIAS = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 FOLDERS = {"inbox": 0, "sent": -1, "outbox": -2, "sentbox": -1}
 
 
@@ -36,6 +39,9 @@ def arguments(parser: argparse.ArgumentParser, name: str, positive) -> None:
 def upload_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("-A", "--attach", action="append", default=[],
                         metavar="FILE", help="upload a file; repeat as needed")
+    parser.add_argument("-I", "--attach-inline", action="append", default=[],
+                        metavar="ALIAS=FILE",
+                        help="upload a file for {{attach:ALIAS}}; repeatable")
 
 
 def destination(args: argparse.Namespace, default: Path) -> tuple[Path, bool]:
@@ -78,11 +84,25 @@ def validate(args: argparse.Namespace) -> None:
         args.output_plan = destination(args, Path())
 
 
-def validate_uploads(args: argparse.Namespace) -> None:
+def validate_uploads(args: argparse.Namespace, body: str = "") -> None:
     """Check every requested file before any avoidable remote mutation."""
+    aliases = {}
+    for value in args.attach_inline:
+        alias, separator, filename = value.partition("=")
+        if (not separator or not filename or not ALIAS.fullmatch(alias)
+                or alias in aliases):
+            raise CommandError("invalid_arguments",
+                               "Use distinct --attach-inline ALIAS=FILE")
+        aliases[alias] = Path(filename)
+    references = INLINE.findall(body)
+    if (set(references) != set(aliases)
+            or "{{attach:" in INLINE.sub("", body)):
+        raise CommandError(
+            "invalid_arguments",
+            "Every inline alias needs a matching placeholder and file")
     paths = []
     try:
-        for value in args.attach:
+        for value in [*args.attach, *aliases.values()]:
             path = Path(value).expanduser()
             if not path.is_file():
                 raise OSError("Upload is not a regular file")
@@ -93,7 +113,8 @@ def validate_uploads(args: argparse.Namespace) -> None:
         raise CommandError(
             "local_input_error",
             "Every attachment must be a readable regular file", 5) from cause
-    args.attach = paths
+    args.inline_files = dict(zip(aliases, paths[len(args.attach):]))
+    args.attach = paths[:len(args.attach)]
 
 
 def upload(board: Board, form: Entwurf, files: list[Path],
@@ -136,6 +157,76 @@ def upload(board: Board, form: Entwurf, files: list[Path],
                 "Upload not confirmed; no final content submitted", 4)
         names.extend((after - before).elements())
     return names
+
+
+def attachment_fields(form: Entwurf) -> dict[str, tuple[int, str]]:
+    """Map stable phpBB attachment IDs to their current form positions."""
+    items = {}
+    for key, aid in form.felder.items():
+        match = re.fullmatch(r"attachment_data\[([0-9]+)\]\[attach_id\]", key)
+        if match:
+            name = form.felder.get(
+                f"attachment_data[{match[1]}][real_filename]", "")
+            if (not re.fullmatch(r"[1-9][0-9]*", aid)
+                    or aid in items or not name):
+                raise CommandError("attachment_upload_failed",
+                                   "Ambiguous attachment fields", 4)
+            items[aid] = (int(match[1]), name)
+    return items
+
+
+def compose(board: Board, form: Entwurf, args: argparse.Namespace,
+            body: str) -> tuple[str, list[str]]:
+    """Upload files and resolve inline aliases after phpBB reorders fields."""
+    initial = (attachment_fields(form)
+               if args.inline_files and not args.dry_run else {})
+    names = upload(board, form, args.attach, args.dry_run)
+    ids = {}
+    for alias, path in args.inline_files.items():
+        before = attachment_fields(form) if not args.dry_run else {}
+        names.extend(upload(board, form, [path], args.dry_run))
+        if not args.dry_run:
+            after = attachment_fields(form)
+            added = after.keys() - before.keys()
+            if len(added) != 1 or not before.keys() <= after.keys():
+                raise CommandError("attachment_upload_failed",
+                                   "Inline attachment ID not confirmed", 4)
+            ids[alias] = added.pop()
+    if ids:
+        final = attachment_fields(form)
+        if any(aid not in final for aid in ids.values()):
+            raise CommandError("attachment_upload_failed",
+                               "Inline attachment disappeared", 4)
+        old_ids = {index: aid for aid, (index, _) in initial.items()}
+
+        def retained(match: re.Match) -> str:
+            aid = old_ids.get(int(match[1]))
+            if aid is None:
+                return match[0]
+            if aid not in final:
+                raise CommandError("attachment_upload_failed",
+                                   "Existing inline attachment disappeared", 4)
+            return (f"[attachment={final[aid][0]}]" + match[2]
+                    + "[/attachment]")
+
+        body = re.sub(r"\[attachment=([0-9]+)\](.*?)\[/attachment\]",
+                      retained, body, flags=re.S)
+        # Use neutral markers while converting Markdown so filenames and
+        # underscores in aliases cannot be interpreted as Markdown formatting.
+        rendered = {}
+        for number, (alias, aid) in enumerate(ids.items()):
+            index, name = final[aid]
+            marker = f"\x00ATTACHMENT{number}\x00"
+            while marker in body:
+                marker += "\x00"
+            body = body.replace("{{attach:" + alias + "}}", marker)
+            name = name.replace("[", "&#91;").replace("]", "&#93;")
+            rendered[marker] = f"[attachment={index}]{name}[/attachment]"
+        message = md_to_bbcode(body)
+        for marker, tag in rendered.items():
+            message = message.replace(marker, tag)
+        return message, names
+    return md_to_bbcode(body), names
 
 
 def metadata(item: Anhang) -> dict:

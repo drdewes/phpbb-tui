@@ -89,6 +89,68 @@ file will pass server-side size/extension checks.
 final content submission. Orphan upload files may remain for normal board
 cleanup. Final sending still uses the existing single-attempt/uncertainty rules.
 
+## Inline placement
+
+Use `{{attach:ALIAS}}` in the body and repeat `--attach-inline ALIAS=FILE`
+(`-I`) for each named upload:
+
+```text
+Before the image.
+
+{{attach:mascot}}
+
+After the image.
+```
+
+```sh
+phpbb-tui reply example --topic 42 --body-file reply.md --attach-inline "mascot=phpBB Bear Mascot in Blue Polo.png"
+```
+
+This works with `post`, `reply`, `edit`, `pm`, and `pm-reply`. Aliases are
+case-sensitive, start with an ASCII letter, and contain only letters, digits,
+underscores, or hyphens. Each alias must be declared once and referenced in the
+body; a placeholder may appear more than once. Split `ALIAS=FILE` at the first
+`=`, so filenames may contain `=`. Unknown, malformed, duplicate, or unused
+aliases fail with status 2 before network access. Unreadable files fail with
+status 5.
+
+Ordinary `--attach` files are uploaded first, followed by named uploads in their
+option order. The client tracks each named upload by its server attachment ID
+and resolves its final index after all uploads. Duplicate filenames and phpBB's
+reordering therefore do not change which file an alias selects. Existing inline
+attachment tags referring to attachments already present in an edit form are
+remapped to their new positions when named uploads are added. Regular
+`--attach`-only behavior and manually supplied tags remain available.
+
+Dry-run checks the aliases, files, and form without uploading. Its `body_bbcode`
+retains the placeholders because the final server indexes are not known yet;
+it is not ready for manual submission. Preview uploads and resolves the tags
+without publishing the final content, with the same orphan-upload caveat as
+ordinary attachments. Ambiguous or missing returned attachment IDs stop final
+submission with status 4. The `attachments` result lists all new filenames,
+including both ordinary and named uploads. Board settings determine how images
+and other file types are displayed inline.
+
+## Inline placement in the TUI
+
+After uploading a file with the existing `d` action, press `i` in the compose
+preview to select an attachment. The current editor reopens with a placeholder
+such as `{{attach:id123}}` appended to the body. Move it to the desired position,
+then save and close the editor to preview. Only the existing `a` action sends.
+Canceling the selection returns to preview without reopening the editor.
+
+The same action is available for topics, replies, edits, and PMs where the
+board permits attachments. Existing inline attachment tags are converted to
+stable placeholders when editing. Placeholders follow server attachment IDs,
+so adding files or reordering fields does not select a different attachment,
+even when filenames are identical. The final BBCode uses the current index.
+
+If a referenced file is removed, correct or remove its placeholder in the
+editor before continuing. Missing or malformed placeholders prevent both
+preview and final submission. Regular attachments and existing compose keys
+remain available. Images still appear according to the board's rendering
+settings; the TUI preview remains a text preview.
+
 ## Output and errors
 
 Both read commands support `--json` (`-j`) or `--quiet` (`-q`), mutually exclusive.
