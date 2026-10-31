@@ -131,6 +131,26 @@ submission with status 4. The `attachments` result lists all new filenames,
 including both ordinary and named uploads. Board settings determine how images
 and other file types are displayed inline.
 
+## Inline placement in the TUI
+
+After uploading a file with the existing `d` action, press `i` in the compose
+preview to select an attachment. The current editor reopens with a placeholder
+such as `{{attach:id123}}` appended to the body. Move it to the desired position,
+then save and close the editor to preview. Only the existing `a` action sends.
+Canceling the selection returns to preview without reopening the editor.
+
+The same action is available for topics, replies, edits, and PMs where the
+board permits attachments. Existing inline attachment tags are converted to
+stable placeholders when editing. Placeholders follow server attachment IDs,
+so adding files or reordering fields does not select a different attachment,
+even when filenames are identical. The final BBCode uses the current index.
+
+If a referenced file is removed, correct or remove its placeholder in the
+editor before continuing. Missing or malformed placeholders prevent both
+preview and final submission. Regular attachments and existing compose keys
+remain available. Images still appear according to the board's rendering
+settings; the TUI preview remains a text preview.
+
 ## Output and errors
 
 Both read commands support `--json` (`-j`) or `--quiet` (`-q`), mutually exclusive.

@@ -134,6 +134,8 @@ The existing `n`/`p` controls follow the board’s
 
 Attachment downloads support `S` for save-as and confirmation before
 [replacing existing files](docs/tui-downloads.md).
+In the compose preview, `i` selects an uploaded attachment for inline placement
+in the existing editor. See [inline placement in the TUI](docs/attachments.md#inline-placement-in-the-tui).
 
 ## Non-interactive / Automation
 
