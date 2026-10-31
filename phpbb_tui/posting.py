@@ -14,7 +14,7 @@ import requests
 from . import attachments
 from .board import Board, BoardError, Entwurf, LoginRequired
 from .command_error import CommandError
-from .markup import bbcode_to_md, md_to_bbcode
+from .markup import bbcode_to_md
 
 
 COMMANDS = ("post", "reply", "edit")
@@ -173,11 +173,10 @@ def write(board: Board, args: argparse.Namespace, body: str) -> dict:
             raise CommandError("operation_unavailable",
                                "The board did not provide quoted content", 8)
         body = quote + "\n\n" + body
-    message = md_to_bbcode(body)
+    message, uploaded = attachments.compose(board, form, args, body)
     result = {"subject": subject, "submitted": False}
-    if args.attach:
-        result["attachments"] = attachments.upload(
-            board, form, args.attach, args.dry_run)
+    if uploaded:
+        result["attachments"] = uploaded
     if args.command == "post":
         result["forum_id"] = args.forum
     elif args.command == "reply":
