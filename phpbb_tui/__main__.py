@@ -52,6 +52,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"phpbb-tui {__version__}")
         return 0
     from . import cli
+    if argv and argv[0] == "login" and any(
+            option.startswith("-") and option not in ("--guest", "--gast")
+            for option in argv[1:]):
+        from . import login
+        return login.main(argv[1:])
     if argv and argv[0] == "tui" and len(argv) > 1:
         argv = argv[1:]
     elif argv and argv[0] in cli.COMMANDS:

@@ -13,7 +13,7 @@ from . import posting
 from . import attachments
 from .board import Board, BoardError, Entwurf, LoginRequired, unescape
 from .command_error import CommandError
-from .markup import bbcode_to_md, md_to_bbcode
+from .markup import bbcode_to_md
 
 
 WRITE_COMMANDS = ("pm", "pm-reply")
@@ -139,12 +139,11 @@ def send(board: Board, args: argparse.Namespace, body: str) -> dict:
                 "operation_unavailable",
                 "The board did not provide quoted PM content", 8)
         body = quote + "\n\n" + body
-    message = md_to_bbcode(body)
+    message, uploaded = attachments.compose(board, form, args, body)
     result = {"subject": subject, "recipients": form.empfaenger,
               "submitted": False}
-    if args.attach:
-        result["attachments"] = attachments.upload(
-            board, form, args.attach, args.dry_run)
+    if uploaded:
+        result["attachments"] = uploaded
     if args.command == "pm-reply":
         result["in_reply_to"] = args.message
     if args.dry_run:

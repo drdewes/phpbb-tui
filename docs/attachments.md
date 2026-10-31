@@ -89,6 +89,48 @@ file will pass server-side size/extension checks.
 final content submission. Orphan upload files may remain for normal board
 cleanup. Final sending still uses the existing single-attempt/uncertainty rules.
 
+## Inline placement
+
+Use `{{attach:ALIAS}}` in the body and repeat `--attach-inline ALIAS=FILE`
+(`-I`) for each named upload:
+
+```text
+Before the image.
+
+{{attach:mascot}}
+
+After the image.
+```
+
+```sh
+phpbb-tui reply example --topic 42 --body-file reply.md --attach-inline "mascot=phpBB Bear Mascot in Blue Polo.png"
+```
+
+This works with `post`, `reply`, `edit`, `pm`, and `pm-reply`. Aliases are
+case-sensitive, start with an ASCII letter, and contain only letters, digits,
+underscores, or hyphens. Each alias must be declared once and referenced in the
+body; a placeholder may appear more than once. Split `ALIAS=FILE` at the first
+`=`, so filenames may contain `=`. Unknown, malformed, duplicate, or unused
+aliases fail with status 2 before network access. Unreadable files fail with
+status 5.
+
+Ordinary `--attach` files are uploaded first, followed by named uploads in their
+option order. The client tracks each named upload by its server attachment ID
+and resolves its final index after all uploads. Duplicate filenames and phpBB's
+reordering therefore do not change which file an alias selects. Existing inline
+attachment tags referring to attachments already present in an edit form are
+remapped to their new positions when named uploads are added. Regular
+`--attach`-only behavior and manually supplied tags remain available.
+
+Dry-run checks the aliases, files, and form without uploading. Its `body_bbcode`
+retains the placeholders because the final server indexes are not known yet;
+it is not ready for manual submission. Preview uploads and resolves the tags
+without publishing the final content, with the same orphan-upload caveat as
+ordinary attachments. Ambiguous or missing returned attachment IDs stop final
+submission with status 4. The `attachments` result lists all new filenames,
+including both ordinary and named uploads. Board settings determine how images
+and other file types are displayed inline.
+
 ## Output and errors
 
 Both read commands support `--json` (`-j`) or `--quiet` (`-q`), mutually exclusive.
