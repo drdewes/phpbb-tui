@@ -108,6 +108,33 @@ class BoardTests(unittest.TestCase):
                     self.board.post("posting.php", {"message": "Synthetic"})
                 self.session.post.assert_called_once()
 
+    @staticmethod
+    def _http_error(status: int, headers: dict) -> requests.HTTPError:
+        response = requests.Response()
+        response.status_code = status
+        response.headers.update(headers)
+        return requests.HTTPError(f"{status} Client Error", response=response)
+
+    def test_cloudflare_challenge_gets_its_own_message(self) -> None:
+        error = self._http_error(403, {"cf-mitigated": "challenge"})
+        self.session.get.return_value.raise_for_status.side_effect = error
+        self.session.post.return_value.raise_for_status.side_effect = error
+        for call in (lambda: self.board.get("index.php"),
+                     lambda: self.board.post("posting.php", {"message": "x"})):
+            with self.subTest(call=call):
+                with self.assertRaises(BoardError) as raised:
+                    call()
+                self.assertIn("Cloudflare", str(raised.exception))
+                self.assertNotIn("403", str(raised.exception))
+
+    def test_plain_forbidden_keeps_generic_message(self) -> None:
+        error = self._http_error(403, {"server": "cloudflare"})
+        self.session.get.return_value.raise_for_status.side_effect = error
+        with self.assertRaises(BoardError) as raised:
+            self.board.get("index.php")
+        self.assertIn("403", str(raised.exception))
+        self.assertNotIn("challenge", str(raised.exception))
+
     def test_saved_cookies_load_and_have_private_permissions(self) -> None:
         cookie = Cookie(
             0, "synthetic_session", "fixture", None, False,

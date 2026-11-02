@@ -262,6 +262,21 @@ class Board:
         if 0 < rest <= 3:
             time.sleep(rest)
 
+    @staticmethod
+    def _netzfehler(fehler: requests.RequestException) -> BoardError:
+        """Netzfehler in eine verständliche Meldung übersetzen.
+
+        Cloudflare stellt manchen Clients statt der Seite eine
+        JavaScript-Abfrage („challenge") und kennzeichnet sie mit dem Header
+        `cf-mitigated: challenge`. Ein Programm ohne Browser kommt daran nicht
+        vorbei; ein nacktes „403 Forbidden" erklärt das aber niemandem.
+        """
+        antwort = getattr(fehler, "response", None)
+        kopf = getattr(antwort, "headers", None) or {}
+        if str(kopf.get("cf-mitigated", "")).lower() == "challenge":
+            return BoardError(t("cloudflare_abfrage"))
+        return BoardError(t("netz_fehler", fehler=fehler))
+
     def _nachfassen(self, path: str, params: dict | None):
         """Einmal nachfassen, wenn die Verbindung abreißt.
 
@@ -283,7 +298,7 @@ class Board:
             r = self._nachfassen(path, params or None)
             r.raise_for_status()
         except requests.RequestException as fehler:
-            raise BoardError(t("netz_fehler", fehler=fehler)) from fehler
+            raise self._netzfehler(fehler) from fehler
         self._save()
         self.page_html = r.text
         self.page_path = path
@@ -298,7 +313,7 @@ class Board:
                             data=data, files=files, timeout=120)
             r.raise_for_status()
         except requests.RequestException as fehler:
-            raise BoardError(t("netz_fehler", fehler=fehler)) from fehler
+            raise self._netzfehler(fehler) from fehler
         if r.history and isinstance(r.url, str):
             self.last_post_url = r.url
         self._save()
