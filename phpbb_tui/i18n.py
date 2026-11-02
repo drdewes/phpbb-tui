@@ -95,6 +95,9 @@ TEXTE: dict[str, dict[str, str]] = {
         "laedt_datei": "lade {name} …",
         # Meldungen
         "netz_fehler": "Forum nicht erreichbar: {fehler}",
+        "cloudflare_abfrage": ("Das Forum steckt hinter einer Cloudflare-Abfrage, die nur "
+                               "ein Browser bestehen kann. Bitte die Forenleitung, "
+                               "phpbb-tui freizuschalten."),
         "verworfen": "verworfen",
         "verwerfen_frage": "Text wirklich verwerfen?",
         "entwurf_zurueck": ("Wiederhergestellter Entwurf: Diesen Text hattest du hier schon "
@@ -239,6 +242,8 @@ TEXTE: dict[str, dict[str, str]] = {
         "entfernt": "removing attachment …",
         "laedt_datei": "downloading {name} …",
         "netz_fehler": "Board unreachable: {fehler}",
+        "cloudflare_abfrage": ("This board is behind a Cloudflare challenge that only a "
+                               "browser can pass. Ask the board admin to allow phpbb-tui."),
         "verworfen": "discarded",
         "verwerfen_frage": "Really discard the text?",
         "entwurf_zurueck": ("Restored draft: you wrote this here before, but it was not "
